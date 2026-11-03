@@ -21,7 +21,7 @@ class DashboardController extends Controller
                 ? Appointment::with(['patient', 'department'])
                     ->where('doctor_id', $doctor->id)
                     ->whereDate('appointment_date', today())
-                    ->orderByRaw("FIELD(priority, 'emergency', 'urgent', 'routine')")
+                    ->orderByRaw("CASE priority WHEN 'emergency' THEN 1 WHEN 'urgent' THEN 2 ELSE 3 END")
                     ->orderBy('token_number')
                     ->get()
                 : collect();
@@ -47,7 +47,7 @@ class DashboardController extends Controller
 
         $todayAppointments = Appointment::with(['patient', 'doctor.user', 'department'])
             ->whereDate('appointment_date', today())
-            ->orderByRaw("FIELD(priority, 'emergency', 'urgent', 'routine')")
+            ->orderByRaw("CASE priority WHEN 'emergency' THEN 1 WHEN 'urgent' THEN 2 ELSE 3 END")
             ->orderBy('token_number')
             ->get();
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Patient;
 
 class PatientController extends Controller
@@ -52,20 +53,26 @@ class PatientController extends Controller
             'medical_history' => 'nullable|string',
         ]);
 
-        $year = date('Y');
-        $lastPatient = Patient::where('uhid', 'like', 'AH-' . $year . '-%')->latest('id')->first();
-        $nextNumber = 1;
-        if ($lastPatient && preg_match('/AH-\d{4}-(\d+)/', $lastPatient->uhid, $matches)) {
-            $nextNumber = intval($matches[1]) + 1;
-        }
-        $validated['uhid'] = sprintf('AH-%s-%04d', $year, $nextNumber);
-        $validated['age'] = $validated['age'] ?? 0;
-        $validated['address'] = $validated['address'] ?? 'Campbell Road, Mozzam Nagar, Lucknow 226003';
-        $validated['emergency_contact_name'] = $validated['emergency_contact'] ?? null;
+        $patient = DB::transaction(function () use ($validated) {
+            $year = date('Y');
+            $lastPatient = Patient::where('uhid', 'like', 'AH-' . $year . '-%')
+                ->lockForUpdate()
+                ->latest('id')
+                ->first();
 
-        Patient::create($validated);
+            $nextNumber = 1;
+            if ($lastPatient && preg_match('/AH-\d{4}-(\d+)/', $lastPatient->uhid, $matches)) {
+                $nextNumber = intval($matches[1]) + 1;
+            }
+            $validated['uhid'] = sprintf('AH-%s-%04d', $year, $nextNumber);
+            $validated['age'] = $validated['age'] ?? 0;
+            $validated['address'] = $validated['address'] ?? 'Campbell Road, Mozzam Nagar, Lucknow 226003';
+            $validated['emergency_contact_name'] = $validated['emergency_contact'] ?? null;
 
-        return redirect()->route('patients.index')->with('success', 'Patient ' . $validated['name'] . ' registered successfully with UHID: ' . $validated['uhid']);
+            return Patient::create($validated);
+        });
+
+        return redirect()->route('patients.index')->with('success', 'Patient ' . $patient->name . ' registered successfully with UHID: ' . $patient->uhid);
     }
 
     public function show(Patient $patient)

@@ -13,6 +13,7 @@ class Patient extends Model
         'uhid',
         'name',
         'age',
+        'date_of_birth',
         'gender',
         'phone',
         'blood_group',

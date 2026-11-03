@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\Doctor;
@@ -53,7 +54,7 @@ class AppointmentController extends Controller
 
     public function create()
     {
-        $patients = Patient::orderBy('name')->get();
+        $patients = Patient::orderBy('name')->take(100)->get();
         $doctors = Doctor::with(['user', 'department'])->where('is_available', true)->get();
         $departments = Department::where('is_active', true)->get();
 
@@ -72,21 +73,29 @@ class AppointmentController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $maxToken = Appointment::where('doctor_id', $validated['doctor_id'])
-            ->whereDate('appointment_date', $validated['appointment_date'])
-            ->max('token_number') ?? 0;
+        $appointment = DB::transaction(function () use ($validated) {
+            $maxToken = Appointment::where('doctor_id', $validated['doctor_id'])
+                ->whereDate('appointment_date', $validated['appointment_date'])
+                ->lockForUpdate()
+                ->max('token_number') ?? 0;
 
-        $validated['token_number'] = $maxToken + 1;
-        $validated['appointment_time'] = $validated['appointment_time'] ?? '10:00:00';
-        $validated['status'] = 'scheduled';
+            $validated['token_number'] = $maxToken + 1;
+            $validated['appointment_time'] = $validated['appointment_time'] ?? '10:00:00';
+            $validated['status'] = 'scheduled';
 
-        Appointment::create($validated);
+            return Appointment::create($validated);
+        });
 
-        return redirect()->route('appointments.index')->with('success', 'Appointment booked successfully! Assigned Token #' . $validated['token_number']);
+        return redirect()->route('appointments.index')->with('success', 'Appointment booked successfully! Assigned Token #' . $appointment->token_number);
     }
 
     public function updateStatus(Request $request, Appointment $appointment)
     {
+        $user = Auth::user();
+        if ($user && $user->isDoctor()) {
+            abort_if(!$user->doctor || $appointment->doctor_id !== $user->doctor->id, 403, 'Unauthorized consultation access.');
+        }
+
         $validated = $request->validate([
             'status' => 'required|in:scheduled,confirmed,in_consultation,completed,cancelled',
             'diagnosis' => 'nullable|string',

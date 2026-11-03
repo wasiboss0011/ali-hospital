@@ -18,7 +18,7 @@ return new class extends Migration
         // Departments table
         Schema::create('departments', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name')->unique();
             $table->text('description')->nullable();
             $table->string('location')->nullable();
             $table->boolean('is_active')->default(true);
@@ -46,6 +46,7 @@ return new class extends Migration
             $table->string('uhid')->unique();
             $table->string('name');
             $table->integer('age');
+            $table->date('date_of_birth')->nullable();
             $table->enum('gender', ['male', 'female', 'other']);
             $table->string('phone');
             $table->string('blood_group')->nullable();
@@ -73,6 +74,9 @@ return new class extends Migration
             $table->text('prescription')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
+
+            $table->index(['appointment_date', 'status']);
+            $table->unique(['doctor_id', 'appointment_date', 'token_number']);
         });
     }
 

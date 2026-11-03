@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Department;
 
 class DepartmentController extends Controller
@@ -15,6 +16,8 @@ class DepartmentController extends Controller
 
     public function store(Request $request)
     {
+        abort_if(!Auth::user() || !Auth::user()->isAdmin(), 403, 'Unauthorized. Only administrators can create departments.');
+
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:departments,name',
             'description' => 'nullable|string',

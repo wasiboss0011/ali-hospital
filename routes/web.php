@@ -12,9 +12,9 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// Authentication
+// Authentication with rate limiting (5 attempts per minute)
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Authenticated Routes
@@ -28,7 +28,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('appointments', AppointmentController::class)->only(['index', 'create', 'store']);
     Route::patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
 
-    // Admin & Staff Only
+    // Doctors Directory & Admin Onboarding
     Route::resource('doctors', DoctorController::class)->only(['index', 'create', 'store']);
+
+    // Departments Management
     Route::resource('departments', DepartmentController::class)->only(['index', 'store']);
 });
