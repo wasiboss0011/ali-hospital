@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y \
     default-mysql-client \
     sqlite3 \
     libsqlite3-dev \
-    && docker-php-ext-install pdo_mysql pdo_sqlite mbstring exif pcntl bcmath gd zip opcache \
+    libpq-dev \
+    && docker-php-ext-install pdo_mysql pdo_pgsql pdo_sqlite mbstring exif pcntl bcmath gd zip opcache \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
